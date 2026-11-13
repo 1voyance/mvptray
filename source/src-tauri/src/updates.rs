@@ -353,17 +353,34 @@ pub fn update_tray() -> Result<(), String> {
 /// Установка новой версии трея (mihomo-tray.new.exe рядом с exe): трей закрывается,
 /// маленький скрипт заменяет файл и запускает трей снова.
 pub fn apply_tray_update() -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
     let new = pending_tray().ok_or("нет файла mihomo-tray.new.exe")?;
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let script = format!(
-        "ping -n 3 127.0.0.1 >nul & copy /y \"{exe}\" \"{prev}\" >nul & move /y \"{new}\" \"{exe}\" >nul & (schtasks /Run /TN MihomoTrayRs >nul 2>&1 || start \"\" \"{exe}\")",
-        new = new.display(),
-        exe = exe.display(),
-        prev = exe.with_file_name("mihomo-tray.prev.exe").display()
+    // cmd.exe не понимает пути с префиксом \\?\ — «Windows не удаётся найти \\»
+    let (new_s, exe_s, prev_s) = (
+        plain_path(&new),
+        plain_path(&exe),
+        plain_path(&exe.with_file_name("mihomo-tray.prev.exe")),
     );
-    util::hidden_command("cmd.exe").args(["/c", &script]).spawn().map_err(|e| e.to_string())?;
+    let script = format!(
+        "ping -n 3 127.0.0.1 >nul & copy /y \"{exe_s}\" \"{prev_s}\" >nul & (move /y \"{new_s}\" \"{exe_s}\" >nul 2>&1 || (ping -n 4 127.0.0.1 >nul & move /y \"{new_s}\" \"{exe_s}\" >nul)) & (schtasks /Run /TN MihomoTrayRs >nul 2>&1 || start \"\" \"{exe_s}\")"
+    );
+    // raw_arg: без него Rust экранирует кавычки как \" и cmd ломает команду
+    util::hidden_command("cmd.exe")
+        .raw_arg(format!("/c \"{script}\""))
+        .spawn()
+        .map_err(|e| e.to_string())?;
     crate::log_info!("установка обновления трея, перезапуск");
     Ok(())
+}
+
+/// Путь без префикса `\\?\`, который выдаёт current_exe() и не понимает cmd.exe.
+fn plain_path(p: &std::path::Path) -> String {
+    let s = p.display().to_string();
+    match s.strip_prefix(r"\\?\") {
+        Some(rest) if !rest.starts_with("UNC\\") => rest.to_string(),
+        _ => s,
+    }
 }
 
 /// Раз в сутки — проверка новых версий ядра и трея; появление mihomo-tray.new.exe.
@@ -419,6 +436,14 @@ pub fn spawn(shared: SharedRef, sink: impl Sink) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plain_path_strips_verbatim_prefix() {
+        let p = |s: &str| plain_path(std::path::Path::new(s));
+        assert_eq!(p(r"\\?\C:\mihomo\tray-rs\mihomo-tray.exe"), r"C:\mihomo\tray-rs\mihomo-tray.exe");
+        assert_eq!(p(r"C:\mihomo\x.exe"), r"C:\mihomo\x.exe");
+        assert_eq!(p(r"\\?\UNC\srv\share\x.exe"), r"\\?\UNC\srv\share\x.exe");
+    }
     #[test]
     fn versions() {
         assert!(newer("v1.19.16", "v1.19.15"));
