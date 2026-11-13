@@ -9,7 +9,7 @@
    - создаст задачу планировщика `MihomoTrayRs`;
 3. Вернуть всё как было: `uninstall-autostart.bat`.
 
-`WebView2Loader.dll` должен лежать рядом с exe. WebView2 Runtime в Windows 11 уже есть.
+Отдельные DLL рядом с exe не нужны. WebView2 Runtime в Windows 11 уже есть.
 
 ## Что умеет
 
