@@ -1,6 +1,6 @@
 [package]
 name = "mihomo-tray"
-version = "2.4.0"
+version = "2.4.1"
 description = "Mihomo VPN tray"
 edition = "2021"
 

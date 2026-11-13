@@ -1,4 +1,4 @@
-// В релизе без консольного окна.
+﻿// В релизе без консольного окна.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[macro_use]
@@ -595,6 +595,7 @@ fn open_target(s: S, what: String) {
         "logs" => util::logs_dir().display().to_string(),
         "backups" => util::backups_dir().display().to_string(),
         "folder" => util::mihomo_dir().display().to_string(),
+        "repo" => "https://github.com/1voyance/mvptray".to_string(),
         _ => return,
     };
     util::open_path(&target);
