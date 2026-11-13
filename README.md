@@ -1,4 +1,4 @@
-# Mihomo Tray (Rust + Tauri)
+﻿# Mihomo Tray (Rust + Tauri)
 
 Трей для VPN-клиента [Mihomo](https://github.com/MetaCubeX/mihomo) под Windows.
 

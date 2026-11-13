@@ -43,6 +43,23 @@ jobs:
         working-directory: source/src-tauri
         run: cargo build --release
 
+      - name: Проверка WebView2Loader.dll
+        id: loader
+        run: |
+          $exe = "source/src-tauri/target/release/mihomo-tray.exe"
+          $text = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes($exe))
+          $need = $text.Contains("WebView2Loader.dll")
+          "need=$($need.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          Write-Host "exe импортирует WebView2Loader.dll: $need"
+
+      - name: WebView2Loader.dll нужен рядом с exe
+        if: steps.loader.outputs.need == 'true'
+        run: |
+          $dll = Get-ChildItem source/src-tauri/target/release -Filter WebView2Loader.dll -Recurse | Select-Object -First 1
+          if (-not $dll) { throw "exe требует WebView2Loader.dll, но файла в target нет" }
+          New-Item -ItemType Directory -Force dist/tray-rs | Out-Null
+          Copy-Item $dll.FullName dist/tray-rs/
+
       - name: Архив для новой установки
         run: |
           New-Item -ItemType Directory -Force dist/tray-rs | Out-Null
@@ -50,10 +67,20 @@ jobs:
           Copy-Item source/src-tauri/target/release/mihomo-tray.exe, README.md, autostart.ps1, install-autostart.bat, uninstall-autostart.bat dist/tray-rs/
           Compress-Archive -Path dist/tray-rs -DestinationPath "dist/mihomo-tray-${{ github.ref_name }}.zip"
 
+      - name: Установщик (Inno Setup)
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { $ver = "0.0.0" }
+          & $iscc "/DAppVersion=$ver" installer/mihomo-tray.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC завершился с кодом $LASTEXITCODE" }
+          Get-ChildItem dist
+
       - name: Релиз
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" dist/mihomo-tray.exe "dist/mihomo-tray-${{ github.ref_name }}.zip" `
+          gh release create "${{ github.ref_name }}" dist/mihomo-tray.exe "dist/mihomo-tray-${{ github.ref_name }}.zip" "dist/mihomo-tray-setup-${{ github.ref_name }}.exe" `
             --title "Mihomo Tray ${{ github.ref_name }}" --generate-notes
