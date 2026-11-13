@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Mihomo</title>
+  <link rel="stylesheet" href="app.css" />
+  <style>
+    /* окно прозрачное: фон, рамку и скругление рисуем сами — без белой системной рамки */
+    html, body { background: transparent; }
+    body::before { display: none; }
+    .fly {
+      position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px; height: 100vh;
+      border-radius: 12px; border: 1px solid #2d3550; overflow: hidden;
+      background:
+        radial-gradient(420px 260px at 0% 0%, rgba(124,92,255,.22), transparent 65%),
+        radial-gradient(360px 260px at 100% 100%, rgba(34,211,238,.12), transparent 65%),
+        #0f1424;
+    }
+    .fly > * { flex-shrink: 0; }
+    .top { display: flex; align-items: center; gap: 10px; }
+    .logo { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; box-shadow: 0 4px 14px rgba(124,92,255,.4); }
+    .logo svg { width: 17px; height: 17px; }
+    .top b { font: 650 15px var(--font-display); }
+    .main { display: flex; align-items: center; gap: 14px; padding: 14px; }
+    .main .power { width: 64px; height: 64px; }
+    .main .power svg { width: 26px; height: 26px; }
+    .main .power::before { inset: -5px; }
+    .main .power::after { inset: -10px; }
+    .st { font: 650 18px var(--font-display); }
+    .st.ok { color: var(--ok); } .st.warn { color: var(--warn); }
+    .node { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .node b { color: var(--text); font-weight: 600; }
+    .speeds { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; overflow: hidden; }
+    .speeds .s { padding: 10px 14px 0; position: relative; z-index: 1; }
+    .speeds .s small { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .speeds .s small i { width: 7px; height: 7px; border-radius: 2px; }
+    .speeds .s b { font: 650 17px var(--font-display); }
+    .speeds .g { grid-column: 1 / -1; height: 46px; margin-top: 8px; }
+    .add { display: flex; gap: 6px; }
+    .add .input { height: 36px; }
+    .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .quick .btn { justify-content: flex-start; height: 38px; font-weight: 550; }
+    .quick .btn svg { color: var(--accent-2); }
+    .foot { margin-top: auto; display: flex; justify-content: space-between; }
+    #toasts { left: 12px; right: 12px; bottom: 12px; }
+    .toast { min-width: 0; }
+  </style>
+</head>
+<body>
+  <div class="fly">
+    <div class="top">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 7 6 11 6-11"/></svg></div>
+      <b class="grow">Mihomo VPN</b>
+      <span class="chip" id="pill"><span class="dot"></span><span>—</span></span>
+    </div>
+
+    <div class="card main">
+      <button class="power" id="power" title="Включить / выключить"><span data-icon="power"></span></button>
+      <div class="grow" style="min-width:0">
+        <div class="st" id="st">—</div>
+        <div class="node ellipsis" id="node">&nbsp;</div>
+        <div class="node ellipsis hidden" id="game" style="color:#8ff0c8"></div>
+      </div>
+    </div>
+
+    <div class="card speeds">
+      <div class="s"><small><i style="background:var(--accent-2)"></i>Загрузка</small><b class="num" id="down">0 Б/с</b></div>
+      <div class="s" style="text-align:right"><small style="justify-content:flex-end"><i style="background:var(--violet)"></i>Отдача</small><b class="num" id="up">0 Б/с</b></div>
+      <div class="g"><svg class="spark" id="spark"></svg></div>
+    </div>
+
+    <div class="seg full" id="mode">
+      <button data-mode="rule">Правила</button>
+      <button data-mode="global">Всё в VPN</button>
+      <button data-mode="direct">Напрямую</button>
+    </div>
+
+    <div class="add">
+      <input class="input" id="quickDomain" placeholder="Сайт в VPN: example.com" />
+      <button class="btn primary icon" id="quickAdd" title="Добавить в VPN" style="width:36px;height:36px"><span data-icon="plus"></span></button>
+    </div>
+
+    <div class="quick">
+      <button class="btn" data-nav="rules"><span data-icon="list"></span>Мои правила</button>
+      <button class="btn" data-nav="sites:broken"><span data-icon="help"></span>Не открывается?</button>
+      <button class="btn" data-nav="rules:add-process"><span data-icon="cpu"></span>Программа</button>
+      <button class="btn" data-nav="overview"><span data-icon="home"></span>Открыть окно</button>
+    </div>
+
+    <div class="foot">
+      <button class="btn sm ghost" data-nav="settings"><span data-icon="settings"></span>Настройки</button>
+      <button class="btn sm ghost" id="quit"><span data-icon="logout"></span>Выход</button>
+    </div>
+  </div>
+  <div id="toasts"></div>
+  <script src="common.js"></script>
+  <script src="flyout.js"></script>
+</body>
+</html>

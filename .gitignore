@@ -1,0 +1,19 @@
+# сборка
+source/src-tauri/target/
+source/src-tauri/gen/
+
+# готовые exe и архивы — выкладываются в Releases, а не в репозиторий
+*.exe
+*.dll
+*.zip
+*.bak
+
+# личные данные: настройки, логи, бэкапы конфига, подписки
+settings.json
+logs/
+backups/
+discord-proxy/
+config*.yaml
+providers/
+*.log
+publish-to-github.bat

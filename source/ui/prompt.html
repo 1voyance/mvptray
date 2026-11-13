@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Mihomo</title>
+  <link rel="stylesheet" href="app.css" />
+  <style>
+    html, body { background: transparent; }
+    body::before { display: none; }
+    .box {
+      position: relative; height: 100vh; padding: 14px 16px; border-radius: 12px; border: 1px solid #2d3550; overflow: hidden;
+      background: radial-gradient(300px 160px at 0% 0%, rgba(251,191,36,.14), transparent 70%), #0f1424;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .head { display: flex; align-items: flex-start; gap: 11px; }
+    .ic { width: 34px; height: 34px; border-radius: 10px; background: rgba(251,191,36,.12); color: var(--warn); display: grid; place-items: center; flex: none; }
+    .ic svg { width: 19px; height: 19px; }
+    .t { font-weight: 650; font-size: 14px; }
+    .host { font-weight: 650; color: #fff; }
+    .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+    .btns { display: flex; gap: 6px; margin-top: auto; }
+    .btns .btn { height: 32px; font-size: 12.5px; }
+    .x { position: absolute; right: 8px; top: 8px; }
+    .timer { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--warn); opacity: .6; width: 100%; transform-origin: left; }
+    .timer.run { transition: transform 25s linear; transform: scaleX(0); }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <button class="btn icon ghost x" data-a="skip" title="Закрыть"><span data-icon="x"></span></button>
+    <div class="head">
+      <div class="ic" data-icon="help"></div>
+      <div style="min-width:0;padding-right:24px">
+        <div class="t">Похоже, сайт не открывается</div>
+        <div class="sub"><span class="host" id="host">—</span> не загрузился напрямую<span id="proc"></span>. Отправить через VPN?</div>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn primary grow" data-a="vpn"><span data-icon="shieldok"></span>В VPN</button>
+      <button class="btn" data-a="skip">Не сейчас</button>
+      <button class="btn ghost" data-a="never" title="Больше не спрашивать про этот сайт">Не спрашивать</button>
+    </div>
+    <div class="timer" id="timer"></div>
+  </div>
+  <script src="common.js"></script>
+  <script>
+    $$("[data-icon]").forEach((el) => (el.innerHTML = icon(el.dataset.icon)));
+    let timer = 0;
+    function show(s) {
+      if (!s) return;
+      $("#host").textContent = s.suffix;
+      $("#host").title = s.host;
+      $("#proc").textContent = s.process ? ` (${s.process})` : "";
+      const t = $("#timer");
+      t.classList.remove("run"); void t.offsetWidth; t.classList.add("run");
+      clearTimeout(timer);
+      timer = setTimeout(() => answer("skip"), 25000);
+    }
+    async function answer(a) {
+      clearTimeout(timer);
+      try { await invoke("prompt_answer", { answer: a }); } catch (e) { console.error(e); }
+    }
+    $$("[data-a]").forEach((b) => b.addEventListener("click", () => answer(b.dataset.a)));
+    listen("prompt", show);
+    invoke("prompt_current").then(show).catch(() => {});
+  </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mihomo VPN</title>
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="main.css" />
+</head>
+<body>
+  <div class="layout">
+    <!-- ======================= боковая панель -->
+    <aside class="side">
+      <div class="brand">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 7 6 11 6-11"/></svg></div>
+        <div>
+          <div class="brand-name">Mihomo</div>
+          <div class="brand-sub">VPN-клиент</div>
+        </div>
+      </div>
+      <nav id="nav">
+        <button data-page="overview" class="on"><span data-icon="home"></span>Обзор</button>
+        <button data-page="nodes"><span data-icon="server"></span>Ноды</button>
+        <button data-page="subs"><span data-icon="layers"></span>Подписки<em id="navSubCount"></em></button>
+        <button data-page="rules"><span data-icon="list"></span>Мои правила<em id="navRuleCount"></em></button>
+        <button data-page="sites"><span data-icon="activity"></span>Сайты<em id="navSuspicious" class="warn"></em></button>
+        <button data-page="settings"><span data-icon="settings"></span>Настройки</button>
+      </nav>
+      <div class="side-status" id="sideStatus">
+        <div class="row"><span class="pulse" id="sideDot"></span><b id="sideTitle">Подключение…</b></div>
+        <div class="muted ellipsis" id="sideSub">&nbsp;</div>
+      </div>
+    </aside>
+
+    <main id="pages">
+      <!-- ======================= ОБЗОР -->
+      <section class="page on" id="page-overview">
+        <header class="page-head">
+          <div>
+            <h1>Обзор</h1>
+            <p class="muted">Состояние VPN и скорость в реальном времени</p>
+          </div>
+          <div class="seg" id="modeSeg" title="Режим маршрутизации">
+            <button data-mode="rule">По правилам</button>
+            <button data-mode="global">Всё через VPN</button>
+            <button data-mode="direct">Напрямую</button>
+          </div>
+        </header>
+
+        <div class="hero">
+          <div class="card hero-main">
+            <button class="power" id="powerBtn" style="width:104px;height:104px" title="Включить / выключить VPN"><span data-icon="power"></span></button>
+            <div class="hero-text">
+              <div class="state" id="stateTitle">—</div>
+              <div class="muted" id="stateReason">&nbsp;</div>
+              <div class="core-note hidden" id="coreNote"></div>
+              <div class="chain" id="chain"></div>
+              <div class="smart-line hidden" id="smartLine"></div>
+              <div class="game-line hidden" id="gameLine"></div>
+              <div class="row hero-meta">
+                <span class="chip" id="pingChip"><span class="dot"></span><span>—</span></span>
+                <button class="btn sm ghost" id="pingBtn"><span data-icon="gauge"></span>Проверить пинг</button>
+                <button class="btn sm ghost" id="restartBtn"><span data-icon="refresh"></span>Перезапустить</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card speed">
+            <div class="speed-top">
+              <div>
+                <div class="speed-label"><i class="sw down"></i>Загрузка</div>
+                <div class="speed-val num" id="downSpeed">0 Б/с</div>
+              </div>
+              <div>
+                <div class="speed-label"><i class="sw up"></i>Отдача</div>
+                <div class="speed-val num small" id="upSpeed">0 Б/с</div>
+              </div>
+            </div>
+            <div class="speed-graph"><svg class="spark" id="spark"></svg></div>
+          </div>
+        </div>
+
+        <div class="tiles">
+          <div class="card tile"><div class="tile-ic" data-icon="download"></div><div><div class="tile-val num" id="tDown">—</div><div class="tile-lbl">Получено</div></div></div>
+          <div class="card tile"><div class="tile-ic violet" data-icon="upload"></div><div><div class="tile-val num" id="tUp">—</div><div class="tile-lbl">Отправлено</div></div></div>
+          <div class="card tile"><div class="tile-ic blue" data-icon="layers"></div><div><div class="tile-val num" id="tConns">—</div><div class="tile-lbl">Соединений</div></div></div>
+          <div class="card tile"><div class="tile-ic green" data-icon="cpu"></div><div><div class="tile-val" id="tVersion">—</div><div class="tile-lbl">Ядро Mihomo</div></div></div>
+        </div>
+
+        <div class="card quick">
+          <h3>Быстрые действия</h3>
+          <div class="quick-grid">
+            <button class="qa" data-q="domain"><span data-icon="globe"></span><b>Добавить сайт</b><small>в VPN, напрямую или блок</small></button>
+            <button class="qa" data-q="process"><span data-icon="cpu"></span><b>Добавить программу</b><small>весь её трафик по правилу</small></button>
+            <button class="qa" data-q="broken"><span data-icon="help"></span><b>Не открывается сайт?</b><small>найти и отправить в VPN</small></button>
+            <button class="qa" data-q="panel"><span data-icon="external"></span><b>Панель Zashboard</b><small>подробная веб-панель</small></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= НОДЫ -->
+      <section class="page" id="page-nodes">
+        <header class="page-head">
+          <div>
+            <h1>Ноды и группы</h1>
+            <p class="muted">Выбор сервера для каждой группы. Группы «авто» выбирают ноду сами по пингу.</p>
+          </div>
+          <div class="row">
+            <div class="search"><span data-icon="search"></span><input class="input" id="nodeSearch" placeholder="Поиск ноды или группы" style="width:240px" /></div>
+          </div>
+        </header>
+        <div id="groups" class="groups"></div>
+      </section>
+
+      <!-- ======================= ПОДПИСКИ -->
+      <section class="page" id="page-subs">
+        <header class="page-head">
+          <div>
+            <h1>Подписки</h1>
+            <p class="muted">Ссылки от VPN-провайдеров. Ноды из активных подписок попадают в Proxy, Auto и остальные группы.</p>
+          </div>
+          <button class="btn primary" id="addSubBtn"><span data-icon="plus"></span>Добавить подписку</button>
+        </header>
+        <div class="toolbar">
+          <span class="muted" style="font-size:13px">Использовать:</span>
+          <div class="seg" id="subModeSeg">
+            <button data-m="all">Все подписки сразу</button>
+            <button data-m="one">Только активную</button>
+          </div>
+          <span class="hint" id="subModeHint"></span>
+        </div>
+        <div id="subsList" class="subs"></div>
+      </section>
+
+      <!-- ======================= ПРАВИЛА -->
+      <section class="page" id="page-rules">
+        <header class="page-head">
+          <div>
+            <h1>Мои правила <span class="count" id="ruleCount"></span></h1>
+            <p class="muted">Проверяются сверху вниз и раньше всех остальных правил конфига.</p>
+          </div>
+          <div class="row">
+            <button class="btn" id="importBtn"><span data-icon="download"></span>Импорт</button>
+            <button class="btn" id="exportBtn"><span data-icon="upload"></span>Экспорт</button>
+            <button class="btn primary" id="addRuleBtn"><span data-icon="plus"></span>Добавить</button>
+          </div>
+        </header>
+        <div class="toolbar">
+          <div class="search grow"><span data-icon="search"></span><input class="input" id="ruleSearch" placeholder="Поиск по правилам" /></div>
+          <div class="seg" id="ruleTypeSeg">
+            <button data-f="all" class="on">Все</button>
+            <button data-f="domain">Сайты</button>
+            <button data-f="process">Программы</button>
+            <button data-f="ip">IP</button>
+          </div>
+          <div class="seg" id="ruleActSeg">
+            <button data-a="all" class="on">Любое</button>
+            <button data-a="vpn">VPN</button>
+            <button data-a="direct">Напрямую</button>
+            <button data-a="block">Блок</button>
+          </div>
+        </div>
+        <div class="bulkbar hidden" id="bulkBar">
+          <b id="bulkCount"></b>
+          <span class="grow"></span>
+          <span class="muted">Действие:</span>
+          <select class="input" id="bulkAction" style="width:200px;height:32px"></select>
+          <button class="btn sm" id="bulkApply">Применить</button>
+          <button class="btn sm danger" id="bulkDelete"><span data-icon="trash"></span>Удалить</button>
+          <button class="btn sm ghost" id="bulkClear">Снять выделение</button>
+        </div>
+        <div class="table card" id="rulesTable">
+          <div class="thead">
+            <label class="cb"><input type="checkbox" id="ruleAll" /><span></span></label>
+            <div>Тип</div><div>Значение</div><div>Действие</div><div class="right">Порядок и правка</div>
+          </div>
+          <div class="tbody" id="rulesBody"></div>
+        </div>
+      </section>
+
+      <!-- ======================= САЙТЫ -->
+      <section class="page" id="page-sites">
+        <header class="page-head">
+          <div>
+            <h1>Сайты и соединения</h1>
+            <p class="muted">Адреса, к которым недавно обращались программы. Отсюда их можно сразу отправить в VPN.</p>
+          </div>
+          <div class="row">
+            <button class="btn ghost" id="sitesClear"><span data-icon="trash"></span>Очистить</button>
+          </div>
+        </header>
+        <div class="toolbar">
+          <div class="seg" id="sitesSeg">
+            <button data-s="all" class="on">Все адреса</button>
+            <button data-s="broken">Не открываются <em id="brokenCount"></em></button>
+            <button data-s="direct">Напрямую</button>
+            <button data-s="vpn">Через VPN</button>
+          </div>
+          <div class="search grow"><span data-icon="search"></span><input class="input" id="sitesSearch" placeholder="Поиск по адресу или программе" /></div>
+          <div class="seg" id="scopeSeg" title="Что добавлять в правило">
+            <button data-scope="suffix" class="on">Весь сайт</button>
+            <button data-scope="host">Только адрес</button>
+          </div>
+        </div>
+        <div class="banner hidden" id="brokenBanner">
+          <span data-icon="help"></span>
+          <div><b>Похоже, эти адреса не открываются.</b> Они шли напрямую и почти ничего не загрузили — обычно так выглядят заблокированные сайты. Нажмите «В VPN» у нужного адреса и обновите страницу в браузере.</div>
+        </div>
+        <div class="table card sites" id="sitesTable">
+          <div class="thead"><div>Адрес</div><div>Программа</div><div>Маршрут</div><div class="right">Трафик</div><div class="right">Добавить правило</div></div>
+          <div class="tbody" id="sitesBody"></div>
+        </div>
+      </section>
+
+      <!-- ======================= НАСТРОЙКИ -->
+      <section class="page" id="page-settings">
+        <header class="page-head">
+          <div>
+            <h1>Настройки</h1>
+            <p class="muted">Уведомления, поведение и резервные копии конфигурации</p>
+          </div>
+        </header>
+        <div class="settings-grid">
+          <div class="card">
+            <h3>Уведомления</h3>
+            <label class="set"><div><b>VPN отключился или снова работает</b><small>Если служба остановилась не по вашей команде</small></div><span class="switch"><input type="checkbox" data-set="notify_service" /><span></span></span></label>
+            <label class="set"><div><b>Смена ноды</b><small>Когда группа «авто» переключилась на другой сервер</small></div><span class="switch"><input type="checkbox" data-set="notify_node" /><span></span></span></label>
+            <label class="set"><div><b>Нода не отвечает</b><small>Активная нода не прошла проверку пинга</small></div><span class="switch"><input type="checkbox" data-set="notify_dead_node" /><span></span></span></label>
+            <label class="set"><div><b>Подписка обновлена</b><small>Mihomo загрузил свежий список нод</small></div><span class="switch"><input type="checkbox" data-set="notify_subscription" /><span></span></span></label>
+          </div>
+          <div class="card">
+            <h3>Поведение</h3>
+            <label class="set"><div><b>Автоперезапуск VPN</b><small id="autoRestartHint">Поднимать службу, если она упала сама (не больше 3 раз за 10 минут)</small></div><span class="switch"><input type="checkbox" data-set="auto_restart" /><span></span></span></label>
+            <div class="set"><div><b>Главная группа</b><small>По ней показываются нода и пинг</small></div><select class="input" data-set="main_group" style="width:190px"></select></div>
+            <div class="set"><div><b>Группа для «В VPN»</b><small>Куда отправлять новые правила по умолчанию</small></div><select class="input" data-set="default_proxy_group" style="width:190px"></select></div>
+          </div>
+          <div class="card">
+            <h3>Умный выбор ноды</h3>
+            <label class="set"><div><b>Умный автовыбор</b><small>Вместо разового пинга раз в 5 минут — постоянная оценка пинга, разброса, потерь и скорости; мёртвая нода заменяется за ~30 секунд</small></div><span class="switch"><input type="checkbox" data-set="smart_auto" /><span></span></span></label>
+            <label class="set"><div><b>Автотест скорости</b><small>Раз в 6 часов, только когда интернет не нагружен. Идёт через служебную группу и не мешает вашему трафику</small></div><span class="switch"><input type="checkbox" data-set="smart_speed_auto" /><span></span></span></label>
+          </div>
+          <div class="card">
+            <h3>Discord — голос через VPN</h3>
+            <div id="discordInfo" class="info-lines"></div>
+            <div class="row wrap" id="discordBtns" style="margin:10px 0 4px">
+              <button class="btn sm" data-discord="install"><span data-icon="check"></span>Установить сейчас</button>
+              <button class="btn sm" data-discord="restart"><span data-icon="refresh"></span>Перезапустить Discord</button>
+              <button class="btn sm" data-discord="download"><span data-icon="download"></span>Скачать свежие файлы</button>
+              <button class="btn sm ghost" data-discord="folder"><span data-icon="folder"></span></button>
+            </div>
+            <label class="set" data-discord-opt><div><b>Следить за обновлениями Discord</b><small>Когда Discord обновится, файлы discord-voice-proxy сами появятся в новой папке</small></div><span class="switch"><input type="checkbox" data-set="discord_watch" /><span></span></span></label>
+            <label class="set" data-discord-opt><div><b>Перезапускать Discord самому</b><small>Иначе — уведомление «перезапустите Discord»</small></div><span class="switch"><input type="checkbox" data-set="discord_auto_restart" /><span></span></span></label>
+          </div>
+          <div class="card">
+            <h3>Обновления</h3>
+            <div id="updInfo" class="info-lines"></div>
+            <div id="updNotes" class="hint hidden" style="white-space:pre-wrap;max-height:140px;overflow:auto;margin-top:6px"></div>
+            <div class="row wrap" style="margin:10px 0 4px">
+              <button class="btn sm" data-upd="check"><span data-icon="refresh"></span>Проверить</button>
+              <button class="btn sm primary" data-upd="core" id="updCoreBtn"><span data-icon="download"></span>Обновить Mihomo</button>
+              <button class="btn sm" data-upd="data"><span data-icon="layers"></span>Базы GeoIP, правила и панель</button>
+              <button class="btn sm primary hidden" data-upd="tray_update" id="updTrayGhBtn"><span data-icon="download"></span>Обновить трей</button>
+              <button class="btn sm primary hidden" data-upd="tray" id="updTrayBtn"><span data-icon="zap"></span>Установить новую версию трея</button>
+            </div>
+            <label class="set"><div><b>Проверять новые версии Mihomo и трея</b><small>При запуске и раз в сутки. Пришлёт уведомление, сам ничего не ставит</small></div><span class="switch"><input type="checkbox" data-set="auto_check_updates" /><span></span></span></label>
+          </div>
+          <div class="card">
+            <h3>Игровой режим</h3>
+            <div id="gameInfo" class="info-lines"></div>
+            <label class="set"><div><b>Включать при запуске игр</b><small>Игры идут напрямую и не трогаются. На время игры: тест скорости на паузе, нода меняется только если умерла (голос в Discord не прервётся), фоновые проверки реже, подсказки не всплывают</small></div><span class="switch"><input type="checkbox" data-set="game_mode" /><span></span></span></label>
+            <label class="set"><div><b>Считать OBS игрой</b><small>Чтобы ничего не дёргалось во время стрима</small></div><span class="switch"><input type="checkbox" data-set="game_mode_obs" /><span></span></span></label>
+            <div class="field" style="margin:10px 0 0"><label>Свои игры (имена .exe через запятую)</label><input class="input" id="gameExtra" placeholder="например: mygame.exe, minecraft.exe" /></div>
+          </div>
+          <div class="card">
+            <h3>Подсказки «сайт не открывается»</h3>
+            <label class="set"><div><b>Предлагать отправить в VPN</b><small>Если сайт несколько раз не загрузился напрямую — в углу экрана появится окошко с кнопкой «В VPN». Фокус не забирает</small></div><span class="switch"><input type="checkbox" data-set="suggest_blocked" /><span></span></span></label>
+            <div class="field" style="margin:10px 0 0"><label>Не спрашивать про</label><div id="ignoredList" class="chips"></div></div>
+          </div>
+          <div class="card">
+            <h3>Файлы</h3>
+            <div class="paths" id="paths"></div>
+            <div class="row wrap">
+              <button class="btn sm" data-open="folder"><span data-icon="folder"></span>Папка Mihomo</button>
+              <button class="btn sm" data-open="logs"><span data-icon="list"></span>Логи трея</button>
+              <button class="btn sm" data-open="panel"><span data-icon="external"></span>Zashboard</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Резервные копии config.yaml</h3>
+            <p class="hint" style="margin-top:-4px">Копия делается автоматически перед каждым изменением правил. Хранятся последние 15.</p>
+            <div id="backups" class="backups"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toasts"></div>
+  <script src="common.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
