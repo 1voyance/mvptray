@@ -132,13 +132,4 @@ cargo test --release
 cargo build --release
 ```
 
-Готовый файл появится в `source/src-tauri/target/release/mihomo-tray.exe` *(при сборке через MSVC `WebView2Loader` вшивается статически в один `.exe`; при сборке через GNU/MinGW рядом должен лежать `WebView2Loader.dll`)*. Также можно использовать [`build.bat`](build.bat).
-
-### Публикация нового релиза
-
-1. Обновите `version` в [`source/src-tauri/Cargo.toml`](source/src-tauri/Cargo.toml) и [`source/src-tauri/tauri.conf.json`](source/src-tauri/tauri.conf.json).
-2. Закоммитьте изменения и отправьте тег:
-   ```bash
-   git tag v2.5.0 && git push origin v2.5.0
-   ```
-3. GitHub Actions ([`release.yml`](.github/workflows/release.yml)) автоматически прогонит тесты, соберёт `.exe`, `.zip` и установщик Inno Setup и опубликует релиз.
+Готовый файл появится в `source/src-tauri/target/release/mihomo-tray.exe`. Также можно использовать [`build.bat`](build.bat).
