@@ -19,10 +19,15 @@ OutputBaseFilename=mihomo-tray-setup-v{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\source\src-tauri\icons\icon.ico
 UninstallDisplayIcon={app}\mihomo-tray.exe
+ChangesAssociations=yes
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "Создать ярлык MihomoTray на рабочем столе"; GroupDescription: "Дополнительно:"
 
 [Files]
 Source: "..\dist\mihomo-tray.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -32,7 +37,8 @@ Source: "..\install-autostart.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\uninstall-autostart.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Mihomo Tray"; Filename: "{app}\mihomo-tray.exe"
+Name: "{autoprograms}\MihomoTray"; Filename: "{app}\mihomo-tray.exe"
+Name: "{autodesktop}\MihomoTray"; Filename: "{app}\mihomo-tray.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\mihomo-tray.exe"; Description: "Запустить Mihomo Tray"; Flags: nowait postinstall skipifsilent

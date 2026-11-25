@@ -363,7 +363,7 @@ pub fn apply_tray_update() -> Result<(), String> {
         plain_path(&exe.with_file_name("mihomo-tray.prev.exe")),
     );
     let script = format!(
-        "ping -n 3 127.0.0.1 >nul & copy /y \"{exe_s}\" \"{prev_s}\" >nul & (move /y \"{new_s}\" \"{exe_s}\" >nul 2>&1 || (ping -n 4 127.0.0.1 >nul & move /y \"{new_s}\" \"{exe_s}\" >nul)) & (schtasks /Run /TN MihomoTrayRs >nul 2>&1 || start \"\" \"{exe_s}\")"
+        "ping -n 3 127.0.0.1 >nul & copy /y \"{exe_s}\" \"{prev_s}\" >nul & (move /y \"{new_s}\" \"{exe_s}\" >nul 2>&1 || (ping -n 4 127.0.0.1 >nul & move /y \"{new_s}\" \"{exe_s}\" >nul)) & ie4uinit.exe -show >nul 2>&1 & (schtasks /Run /TN MihomoTrayRs >nul 2>&1 || start \"\" \"{exe_s}\")"
     );
     // raw_arg: без него Rust экранирует кавычки как \" и cmd ломает команду
     util::hidden_command("cmd.exe")
