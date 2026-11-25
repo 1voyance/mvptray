@@ -56,6 +56,9 @@ pub fn register(mixed_port: Option<u16>) -> Result<WarpConfig, String> {
         let mut b = ureq::AgentBuilder::new()
             .timeout_connect(Duration::from_secs(6))
             .timeout(Duration::from_secs(12));
+        if let Ok(tls) = native_tls::TlsConnector::new() {
+            b = b.tls_connector(std::sync::Arc::new(tls));
+        }
         if let Some(p) = proxy_url {
             if let Ok(px) = ureq::Proxy::new(&p) {
                 b = b.proxy(px);
@@ -288,10 +291,13 @@ pub fn heal_broken_dns(d: &mut Doc) -> bool {
 /// Попытаться скачать начало подписки (до обрыва ТСПУ на 16 КБ) и спасти хотя бы 1–3 полные ноды,
 /// чтобы Mihomo смог подняться и зарегистрировать WARP поверх рабочей ноды.
 pub fn try_partial_bootstrap(url: &str) -> Option<String> {
-    let agent = ureq::AgentBuilder::new()
+    let mut b = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(4))
-        .timeout_read(Duration::from_secs(5))
-        .build();
+        .timeout_read(Duration::from_secs(5));
+    if let Ok(tls) = native_tls::TlsConnector::new() {
+        b = b.tls_connector(std::sync::Arc::new(tls));
+    }
+    let agent = b.build();
     let resp = agent
         .get(url)
         .set("User-Agent", "clash.meta")

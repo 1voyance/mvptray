@@ -517,6 +517,11 @@ fn mixed_port_from_doc(d: &Doc) -> Option<u16> {
 /// автоматически поднимает скрытый Cloudflare WARP (`WARP-Sub`) и повторяет обновление.
 /// Если текущая нода в `Auto` не пропускает UDP (WireGuard), перебирает другие ноды подписки.
 pub fn refresh_with_fallback(api: &Api, name: &str) -> Result<RefreshOutcome, String> {
+    // 0. Проверяем, что служба Mihomo вообще запущена
+    if api.version().is_err() {
+        return Err("Служба Mihomo не запущена — сначала включите VPN".into());
+    }
+
     // 1. Сначала пробуем обычное обновление
     let first_err = match refresh(api, name) {
         Ok(()) => {
