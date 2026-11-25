@@ -421,7 +421,7 @@ fn toggle_flyout(app: &AppHandle, rect: Rect) {
 
 fn place_and_show_flyout(app: &AppHandle, w: &tauri::WebviewWindow, rect: Rect) {
     let scale = w.scale_factor().unwrap_or(1.0);
-    let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new((340.0 * scale) as u32, (520.0 * scale) as u32));
+    let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new((340.0 * scale) as u32, (464.0 * scale) as u32));
     let (fw, fh) = (size.width as i32, size.height as i32);
     let pos = rect.position.to_physical::<i32>(scale);
     let rsz = rect.size.to_physical::<i32>(scale);

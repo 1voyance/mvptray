@@ -135,6 +135,7 @@ function showApply(res, okText) {
   if (!res.ok) { toast(res.message || "Ошибка", "error"); return false; }
   if (res.message === "Изменений нет") { toast("Изменений нет", "info"); return true; }
   if (!res.live) toast((okText ? okText + ". " : "") + (res.message || "Сохранено"), "info", 4500);
+  else if (res.message) toast(res.message, "ok", 4500);
   else if (okText) toast(okText + " — уже работает", "ok");
   return true;
 }

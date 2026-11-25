@@ -56,7 +56,21 @@ function go(page) {
 
 async function init() {
   fillIcons();
+  const winApi = window.__TAURI__?.window?.getCurrentWindow?.();
+  if (winApi) {
+    $("#winMin")?.addEventListener("click", () => winApi.minimize());
+    $("#winMax")?.addEventListener("click", () => winApi.toggleMaximize());
+    $("#winClose")?.addEventListener("click", () => winApi.close());
+    $(".titlebar")?.addEventListener("dblclick", (e) => {
+      if (!e.target.closest(".win-btns")) winApi.toggleMaximize();
+    });
+  }
   $$("#nav button").forEach((b) => b.addEventListener("click", () => go(b.dataset.page)));
+  $$("#settingsTabs button").forEach((b) => b.addEventListener("click", () => {
+    const tab = b.dataset.stab;
+    $$("#settingsTabs button").forEach((x) => x.classList.toggle("on", x.dataset.stab === tab));
+    $$(".stab-pane").forEach((p) => p.classList.toggle("on", p.dataset.stabPane === tab));
+  }));
 
   listen("status", renderStatus);
   listen("toast", (t) => toast(t.text, t.kind));
@@ -355,7 +369,8 @@ function renderSubs() {
       h("div", { class: "sub-ic", html: icon("layers") }),
       h("div", { class: "grow", style: { minWidth: 0 } },
         h("div", { class: "row" }, h("b", { class: "sub-name" }, s.name),
-          s.active ? h("span", { class: "chip ok" }, h("span", { class: "dot" }), "используется") : h("span", { class: "chip off" }, "не используется")),
+          s.active ? h("span", { class: "chip ok" }, h("span", { class: "dot" }), "используется") : h("span", { class: "chip off" }, "не используется"),
+          s.via_warp ? h("span", { class: "chip blue", title: "Обновляется через встроенный Cloudflare WARP" }, "WARP") : null),
         h("div", { class: "row", style: { gap: "4px", marginTop: "4px" } }, urlEl, eye, copy),
         h("div", { class: "hint" }, meta)),
       h("div", { class: "sub-ops" },

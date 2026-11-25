@@ -14,6 +14,7 @@ mod smart;
 mod subs;
 mod updates;
 mod tray;
+mod warp;
 
 use monitor::{HostEntry, Shared, SharedRef, Status};
 use rules::{ApplyResult, ImportLine, Rule};
@@ -330,7 +331,7 @@ async fn subs_action(s: S<'_>, action: String, name: String, url: Option<String>
         let api = shared.api();
         let url = url.unwrap_or_default();
         let mut final_name = name.clone();
-        let apply = match action.as_str() {
+        let mut apply = match action.as_str() {
             "add" => {
                 let d = rules::load_doc()?;
                 final_name = subs::make_name(&d, &name, &url);
@@ -341,15 +342,26 @@ async fn subs_action(s: S<'_>, action: String, name: String, url: Option<String>
             "set_url" => subs::apply(&api, &format!("подписка {name}: новая ссылка"), |d| subs::set_url(d, &name, &url)),
             "activate" => subs::apply(&api, &format!("подписка {name}: активная"), |d| subs::activate(d, &name)),
             "refresh" => {
-                subs::refresh(&api, &name)?;
-                ApplyResult { ok: true, live: true, message: String::new() }
+                let out = subs::refresh_with_fallback(&api, &name)?;
+                let message = if out.used_warp {
+                    format!("Подписка обновлена через встроенный WARP-обход (нод: {})", out.nodes)
+                } else {
+                    String::new()
+                };
+                ApplyResult { ok: true, live: true, message }
             }
             _ => return Err("неизвестное действие".into()),
         };
-        // после добавления/смены ссылки — сразу скачать ноды
+        // после добавления/смены ссылки — сразу скачать ноды (с авто-обходом через WARP при обрыве)
         if apply.ok && apply.live && matches!(action.as_str(), "add" | "set_url") {
-            if let Err(e) = subs::refresh(&api, &final_name) {
-                log_warn!("загрузка подписки {final_name}: {e}");
+            match subs::refresh_with_fallback(&api, &final_name) {
+                Ok(out) if out.used_warp => {
+                    apply.message = format!("Подписка загружена через встроенный WARP-обход (нод: {})", out.nodes);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    log_warn!("загрузка подписки {final_name}: {e}");
+                }
             }
         }
         shared.poke.store(true, Ordering::Relaxed);
@@ -687,6 +699,23 @@ fn main() {
                 tray::style_flyout(&f);
             }
             monitor::spawn(handle.clone(), shared.clone(), tray::TraySink::new(handle.clone()));
+            // Тихая авто-проверка сломанного DNS (https://77.88.8.8/dns-query) при запуске
+            let dns_shared = shared.clone();
+            thread::spawn(move || {
+                if let Ok(d) = rules::load_doc() {
+                    let mut test = d.clone();
+                    if warp::heal_broken_dns(&mut test) {
+                        let api = dns_shared.api();
+                        let r = rules::mutate(&api, "автоисправление сломанного DNS", |doc| {
+                            warp::heal_broken_dns(doc);
+                            Ok(())
+                        });
+                        if r.ok {
+                            log_info!("автоисправление DNS: заменён нерабочий https://77.88.8.8/dns-query");
+                        }
+                    }
+                }
+            });
             smart::spawn(handle.clone(), shared.clone(), tray::TraySink::new(handle.clone()));
             games::spawn(shared.clone(), tray::TraySink::new(handle.clone()));
             discord::spawn(shared.clone(), tray::TraySink::new(handle.clone()));

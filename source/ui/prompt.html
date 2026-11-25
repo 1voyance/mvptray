@@ -6,22 +6,21 @@
   <link rel="stylesheet" href="app.css" />
   <style>
     html, body { background: transparent; }
-    body::before { display: none; }
     .box {
-      position: relative; height: 100vh; padding: 14px 16px; border-radius: 12px; border: 1px solid #2d3550; overflow: hidden;
-      background: radial-gradient(300px 160px at 0% 0%, rgba(251,191,36,.14), transparent 70%), #0f1424;
+      position: relative; height: 100vh; padding: 14px 15px; border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12); overflow: hidden; background: #0d0d10;
       display: flex; flex-direction: column; gap: 10px;
     }
-    .head { display: flex; align-items: flex-start; gap: 11px; }
-    .ic { width: 34px; height: 34px; border-radius: 10px; background: rgba(251,191,36,.12); color: var(--warn); display: grid; place-items: center; flex: none; }
-    .ic svg { width: 19px; height: 19px; }
-    .t { font-weight: 650; font-size: 14px; }
-    .host { font-weight: 650; color: #fff; }
-    .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+    .head { display: flex; align-items: flex-start; gap: 10px; }
+    .ic { width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, .12); border: 1px solid rgba(245, 158, 11, .24); color: var(--warn); display: grid; place-items: center; flex: none; }
+    .ic svg { width: 17px; height: 17px; }
+    .t { font-weight: 600; font-size: 13.5px; letter-spacing: -.01em; }
+    .host { font-weight: 600; color: var(--text); }
+    .sub { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
     .btns { display: flex; gap: 6px; margin-top: auto; }
-    .btns .btn { height: 32px; font-size: 12.5px; }
+    .btns .btn { height: 30px; font-size: 12px; }
     .x { position: absolute; right: 8px; top: 8px; }
-    .timer { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--warn); opacity: .6; width: 100%; transform-origin: left; }
+    .timer { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--warn); opacity: .55; width: 100%; transform-origin: left; }
     .timer.run { transition: transform 25s linear; transform: scaleX(0); }
   </style>
 </head>

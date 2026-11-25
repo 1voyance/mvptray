@@ -16,6 +16,7 @@ pub struct ProviderCfg {
     pub kind: String,
     pub url: String,
     pub path: String,
+    pub proxy: String,
 }
 
 /// Метки, которые трей оставляет при удалении последней подписки, чтобы при
@@ -86,7 +87,7 @@ pub fn providers(d: &Doc) -> Vec<ProviderCfg> {
                     .map(|x| unquote(&x.trim_start()[key.len() + 1..]))
                     .unwrap_or_default()
             };
-            out.push(ProviderCfg { kind: field("type"), url: field("url"), path: field("path"), name });
+            out.push(ProviderCfg { kind: field("type"), url: field("url"), path: field("path"), proxy: field("proxy"), name });
         }
     }
     out
@@ -142,7 +143,7 @@ pub fn mode(d: &Doc) -> String {
     let names: Vec<String> = providers(d).into_iter().map(|p| p.name).collect();
     let uses: Vec<Vec<String>> = groups_use(d)
         .into_iter()
-        .filter(|(g, _, _)| g != rules::PROBE_GROUP)
+        .filter(|(g, _, _)| g != rules::PROBE_GROUP && g != crate::warp::WARP_DIALER_GROUP)
         .map(|(_, _, l)| l)
         .collect();
     if uses.is_empty() || names.is_empty() {
@@ -384,6 +385,27 @@ pub fn set_url(d: &mut Doc, name: &str, url: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Назначить или убрать `proxy:` у провайдера подписки (например, `"WARP-Sub"`).
+pub fn set_proxy(d: &mut Doc, name: &str, proxy: Option<&str>) -> Result<(), String> {
+    let (s, e) = provider_range(d, name).ok_or("подписка не найдена")?;
+    let existing = (s + 1..e).find(|&i| indent(&d.lines[i]) == 4 && d.lines[i].trim_start().starts_with("proxy:"));
+    match (existing, proxy.filter(|x| !x.is_empty())) {
+        (Some(i), Some(p)) => d.lines[i] = format!("    proxy: \"{p}\""),
+        (Some(i), None) => {
+            d.lines.remove(i);
+        }
+        (None, Some(p)) => {
+            let at = (s + 1..e)
+                .find(|&i| indent(&d.lines[i]) == 4 && d.lines[i].trim_start().starts_with("path:"))
+                .map(|i| i + 1)
+                .unwrap_or(s + 1);
+            d.lines.insert(at, format!("    proxy: \"{p}\""));
+        }
+        (None, None) => {}
+    }
+    Ok(())
+}
+
 /// Сделать активной одну подписку ("*" — все сразу).
 pub fn activate(d: &mut Doc, name: &str) -> Result<(), String> {
     let all: Vec<String> = providers(d).into_iter().map(|p| p.name).collect();
@@ -411,6 +433,7 @@ pub struct SubView {
     pub nodes: Option<usize>,
     pub updated_at: String,
     pub active: bool,
+    pub via_warp: bool,
 }
 
 #[derive(Serialize)]
@@ -436,6 +459,7 @@ pub fn view(api: &Api) -> SubsView {
                 nodes: lp.and_then(|x| x.get("proxies")).and_then(Value::as_array).map(|a| a.len()),
                 updated_at: lp.and_then(|x| x.get("updatedAt")).and_then(Value::as_str).unwrap_or("").to_string(),
                 active: used.contains(&p.name),
+                via_warp: p.proxy == crate::warp::WARP_PROXY_NAME,
                 name: p.name,
                 url: p.url,
                 kind: p.kind,
@@ -448,6 +472,146 @@ pub fn view(api: &Api) -> SubsView {
 /// Скачать подписку сейчас.
 pub fn refresh(api: &Api, name: &str) -> Result<(), String> {
     api.put_slow(&format!("/providers/proxies/{}", util::url_encode(name))).map_err(String::from)
+}
+
+#[derive(Debug, Clone)]
+pub struct RefreshOutcome {
+    pub used_warp: bool,
+    pub nodes: usize,
+}
+
+fn provider_node_count(api: &Api, name: &str) -> usize {
+    api.proxy_providers()
+        .ok()
+        .and_then(|v| v.get(name).cloned())
+        .and_then(|p| p.get("proxies").and_then(Value::as_array).map(|a| a.len()))
+        .unwrap_or(0)
+}
+
+fn live_vpn_node_names(api: &Api) -> Vec<String> {
+    let Ok(provs) = api.proxy_providers() else { return vec![] };
+    let Some(obj) = provs.as_object() else { return vec![] };
+    let mut out = Vec::new();
+    for p in obj.values() {
+        if p.get("vehicleType").and_then(Value::as_str) == Some("HTTP") {
+            if let Some(arr) = p.get("proxies").and_then(Value::as_array) {
+                for n in arr {
+                    if let Some(name) = n.get("name").and_then(Value::as_str) {
+                        out.push(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+fn mixed_port_from_doc(d: &Doc) -> Option<u16> {
+    d.top_value("mixed-port")
+        .or_else(|| d.top_value("port"))
+        .and_then(|s| s.parse::<u16>().ok())
+        .filter(|&p| p > 0)
+}
+
+/// Обновить подписку; если напрямую не вышло (блокировка Cloudflare / ТСПУ 16 КБ / EOF),
+/// автоматически поднимает скрытый Cloudflare WARP (`WARP-Sub`) и повторяет обновление.
+/// Если текущая нода в `Auto` не пропускает UDP (WireGuard), перебирает другие ноды подписки.
+pub fn refresh_with_fallback(api: &Api, name: &str) -> Result<RefreshOutcome, String> {
+    // 1. Сначала пробуем обычное обновление
+    let first_err = match refresh(api, name) {
+        Ok(()) => {
+            let n = provider_node_count(api, name);
+            if n > 0 {
+                return Ok(RefreshOutcome { used_warp: false, nodes: n });
+            }
+            "подписка вернула 0 нод".to_string()
+        }
+        Err(e) => e,
+    };
+
+    log_warn!("подписка {name}: обновление не удалось ({first_err}), пробую встроенный WARP-обход");
+
+    let doc = rules::load_doc()?;
+    let prov = providers(&doc)
+        .into_iter()
+        .find(|p| p.name == name)
+        .ok_or_else(|| first_err.clone())?;
+    let mport = mixed_port_from_doc(&doc);
+
+    // 2. Если рабочих VPN-нод вообще нет (первый запуск), пробуем частичный bootstrap из первых 16 КБ
+    let mut node_names = live_vpn_node_names(api);
+    if node_names.is_empty() && !prov.url.is_empty() && !prov.path.is_empty() {
+        if let Some(salvaged) = crate::warp::try_partial_bootstrap(&prov.url) {
+            let rel = prov.path.trim_start_matches("./").trim_start_matches(".\\");
+            let full = util::mihomo_dir().join(rel);
+            if let Some(parent) = full.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            if util::write_atomic(&full, salvaged.as_bytes()).is_ok() {
+                log_info!("подписка {name}: частичный bootstrap сохранён в {}, перезагружаю Mihomo", full.display());
+                let _ = api.reload_config(&util::config_path());
+                std::thread::sleep(std::time::Duration::from_millis(1200));
+                node_names = live_vpn_node_names(api);
+            }
+        }
+    }
+
+    // 3. Регистрируем персональный WARP-ключ (если WARP-Sub ещё нет в config.yaml)
+    let have_nodes = !node_names.is_empty();
+    let need_reg = !crate::warp::has_warp_proxy(&doc);
+    let warp_cfg = if need_reg {
+        Some(crate::warp::register(if have_nodes { mport } else { None }).map_err(|e| format!("{first_err} (WARP: {e})"))?)
+    } else {
+        None
+    };
+
+    let all_provs: Vec<String> = providers(&doc).into_iter().map(|p| p.name).collect();
+    let dialer_group = if have_nodes { Some(crate::warp::WARP_DIALER_GROUP) } else { None };
+    let res = apply(api, &format!("подписка {name}: обход через WARP"), |d| {
+        if have_nodes {
+            crate::warp::ensure_warp_dialer_group(d, &all_provs);
+        }
+        if let Some(ref cfg) = warp_cfg {
+            crate::warp::ensure_warp_proxy(d, cfg, dialer_group);
+        } else {
+            crate::warp::set_warp_dialer(d, dialer_group);
+        }
+        set_proxy(d, name, Some(crate::warp::WARP_PROXY_NAME))
+    });
+    if !res.ok {
+        return Err(format!("{first_err} (не удалось включить WARP: {})", res.message));
+    }
+
+    std::thread::sleep(std::time::Duration::from_millis(900));
+
+    // Если нод нет — пробуем прямой WARP; если ноды есть — перебираем их в WARP-Dialer
+    // по REST API (1 мс, без перезагрузки конфига и без смены Auto у пользователя!).
+    if node_names.is_empty() {
+        refresh(api, name).map_err(|e| format!("обновление через WARP не удалось: {e}"))?;
+        let nodes = provider_node_count(api, name);
+        return Ok(RefreshOutcome { used_warp: true, nodes });
+    }
+
+    let mut last_err = first_err;
+    for node in node_names.iter().take(6) {
+        let _ = api.select(crate::warp::WARP_DIALER_GROUP, node);
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        match refresh(api, name) {
+            Ok(()) => {
+                let nodes = provider_node_count(api, name);
+                if nodes > 0 {
+                    log_info!("подписка {name}: обновлена через WARP-Sub (нода {node}, всего нод: {nodes})");
+                    return Ok(RefreshOutcome { used_warp: true, nodes });
+                }
+            }
+            Err(e) => {
+                log_warn!("подписка {name}: WARP через {node} не сработал ({e}), пробую следующую ноду");
+                last_err = e;
+            }
+        }
+    }
+
+    Err(format!("обновление через WARP не удалось: {last_err}"))
 }
 
 pub fn apply<F: FnOnce(&mut Doc) -> Result<(), String>>(api: &Api, what: &str, f: F) -> ApplyResult {
